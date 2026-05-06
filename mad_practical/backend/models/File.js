@@ -9,8 +9,20 @@ const fileSchema = new mongoose.Schema({
   fileType: {
     type: String,
     required: true,
-    enum: ['pdf', 'doc', 'image', 'other'],
+    enum: ['pdf', 'doc', 'image', 'video', 'other'],
     default: 'other',
+  },
+  originalName: {
+    type: String,
+    default: '',
+  },
+  filePath: {
+    type: String,
+    default: '',
+  },
+  fileSize: {
+    type: Number,
+    default: 0,
   },
   description: {
     type: String,

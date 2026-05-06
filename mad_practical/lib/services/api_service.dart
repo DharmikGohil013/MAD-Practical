@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/file_model.dart';
@@ -24,7 +25,44 @@ class ApiService {
     }
   }
 
-  /// POST /api/files
+  /// POST /api/files  (multipart — with actual file bytes)
+  static Future<FileModel> uploadFile({
+    required String fileName,
+    required String fileType,
+    required String description,
+    required Uint8List fileBytes,
+    required String originalName,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/files');
+    final request = http.MultipartRequest('POST', uri);
+
+    request.fields['fileName'] = fileName;
+    request.fields['fileType'] = fileType;
+    request.fields['description'] = description;
+
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: originalName,
+      ),
+    );
+
+    final streamedResponse =
+        await request.send().timeout(const Duration(seconds: 30));
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 201) {
+      return FileModel.fromJson(json.decode(response.body));
+    } else if (response.statusCode == 409) {
+      throw Exception('A file with this name already exists');
+    } else {
+      final body = json.decode(response.body);
+      throw Exception(body['error'] ?? 'Failed to upload file');
+    }
+  }
+
+  /// POST /api/files  (JSON — manual entry, no real file)
   static Future<FileModel> createFile({
     required String fileName,
     required String fileType,

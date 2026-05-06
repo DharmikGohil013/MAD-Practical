@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../models/file_model.dart';
@@ -92,6 +93,53 @@ class FileProvider extends ChangeNotifier {
       _statusMessage = 'File created successfully';
 
       // Update cache
+      final box = await Hive.openBox<FileModel>(_filesBoxName);
+      await box.put(file.id, file);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _statusMessage = e.toString().replaceFirst('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Upload a local file via multipart POST
+  Future<bool> uploadFile({
+    required String fileName,
+    required String fileType,
+    required String description,
+    required Uint8List fileBytes,
+    required String originalName,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final duplicate = _files.any(
+        (f) => f.fileName.toLowerCase() == fileName.trim().toLowerCase(),
+      );
+      if (duplicate) {
+        _statusMessage = 'A file with this name already exists';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final file = await ApiService.uploadFile(
+        fileName: fileName,
+        fileType: fileType,
+        description: description,
+        fileBytes: fileBytes,
+        originalName: originalName,
+      );
+
+      _files.insert(0, file);
+      _statusMessage = 'File uploaded successfully';
+
       final box = await Hive.openBox<FileModel>(_filesBoxName);
       await box.put(file.id, file);
 
